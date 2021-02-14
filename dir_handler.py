@@ -1,45 +1,75 @@
 import socket
 import os
 import tqdm
+# from client_handler import login_procedure
 
 BUFFER_SIZE = 4096
 
-def receive_files_and_write(s, user_name):
+def receive_files_and_write(s, path):
     try:
-        os.mkdir(user_name)
+        os.mkdir(path)
     except OSError:
         print(OSError)
 
     l = 1
     file_name = ""
+    f = ""
     while(l):
         l = s.recv(BUFFER_SIZE)
+        print(path)
         try:
-            if l.decode() == "D6642D2FE679ED121CB9067EE0DC10C244CCAB926BCCD9D18C3021E66330384C":
+            msg = l.decode()
+            if "mkdirNcd" in msg:
+                new_dir = msg.split("mkdirNcd ")[1]
+                subdir = path +"/"+ new_dir
+                receive_files_and_write(s, subdir)
+                continue
+            elif msg == "D6642D2FE679ED121CB9067EE0DC10C244CCAB926BCCD9D18C3021E66330384C":
                 file_name = s.recv(BUFFER_SIZE).decode()
-                f = open((user_name+"/"+file_name),"w+")
+                f = open((path+"/"+file_name),"w+")
+                print(file_name)
                 print("new plain text")
                 continue
-            f.write(l.decode())
+            elif "cd .." in msg:
+                return
+            if f != "":
+                f.write(msg)
         except (UnicodeDecodeError, TypeError):
-            f.close()
-            f = open((user_name+"/"+file_name), "wb+")
+            if f != "":
+                f.close()
+            f = open((path+"/"+file_name), "wb+")
             print("new binary file")
             while(l):
-                f.write(l)
+                if not f.closed:
+                    f.write(l)
                 l = s.recv(BUFFER_SIZE)
                 try:
-                    if l.decode() == "D6642D2FE679ED121CB9067EE0DC10C244CCAB926BCCD9D18C3021E66330384C":
+                    msg = l.decode()
+                    if msg == "db2350b264d0b0a4b14528c94dbfaf7ef7cc90a525062bb39f5eba3093e9e095":
+                        break
+                    if msg == "D6642D2FE679ED121CB9067EE0DC10C244CCAB926BCCD9D18C3021E66330384C":
                         f.close()
                         file_name = s.recv(BUFFER_SIZE).decode()
-                        f = open((user_name+"/"+file_name),"w+")
+                        print(file_name)
+                        f = open((path+"/"+file_name),"w+")
                         break
+                    elif "cd .." in msg:
+                        return
+                    elif "mkdirNcd" in msg:
+                        new_dir = msg.split("mkdirNcd ")[1]
+                        subdir = path +"/"+ new_dir
+                        receive_files_and_write(s, subdir)
+                        continue
                 except UnicodeDecodeError:
                     continue
+        except IsADirectoryError:
+            s.close()
+            return 1
 
         print("aldı")
-
-    f.close()
-    s.send("received".encode())
-    # s.close()
-    # exit()
+    #s.send("received".encode())
+    s.close()
+    print("socket has been closed")
+    if f != "":
+        f.close()
+    return 0

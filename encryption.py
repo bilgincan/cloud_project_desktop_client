@@ -22,3 +22,12 @@ def decrypt(key,cipher, lucky_number):
         decrypted = ord(key[i]) ^ ord(cipher[i]) ^ lucky_number
         message += chr(decrypted)
     return message
+
+def RSA_encrypt(message, key):
+    return pow(message,key.e) % key.n
+
+def RSA_decrypt(cipher, key):
+    return pow(cipher,key.d) % key.n
+
+def RSA_sign(message, key):
+    return pow(message, key.d) % key.n
