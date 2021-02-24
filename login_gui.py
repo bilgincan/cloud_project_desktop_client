@@ -36,7 +36,7 @@ class Login:
         username_info = self.username.get()
         password_info = self.password.get()
         key = str(generate_key())
-        password_info = encrypt(key, password_info, 0)
+        password_info = simple_encrypt(key, password_info, 0)
 
         f = open("user_data.txt", "w+")
         f.write(key)
